@@ -1,4 +1,4 @@
-name: Android CI
+name: 构建测试版本
 
 on:
   push:
@@ -136,7 +136,8 @@ jobs:
           echo "$COMMIT_MESSAGE_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - #name: 发送合并信息
+      - name: 发送合并信息
+        if: ${{ false }}  # 禁用此步骤
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TG_CHAT_ID }}
@@ -157,14 +158,16 @@ jobs:
             ${{ steps.commit_details.outputs.COMMIT_MESSAGE_BODY }}
           format: markdown
 
-      - #name: 发送正常 APK
+      - name: 发送正常 APK
+        if: ${{ false }}  # 禁用此步骤     
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TG_CHAT_ID }}
           token: ${{ secrets.TG_BOT_TOKEN }}
           document: ${{ steps.extract_apks.outputs.signed_normal }}
 
-      - #name: 发送兼容的 APK
+      - name: 发送兼容的 APK
+        if: ${{ false }}  # 禁用此步骤
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TG_CHAT_ID }}
