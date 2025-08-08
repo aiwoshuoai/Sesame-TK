@@ -1,4 +1,4 @@
-name: Android CI
+name: 发布测试版
 
 on:
   push:
@@ -14,36 +14,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set Timezone to Asia/Shanghai
+      - name: 将时区设为亚洲/上海
         run: |
           sudo timedatectl set-timezone Asia/Shanghai
           echo "Current time: $(date)"
 
-      - name: Checkout
+      - name: 检出
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up JDK
+      - name: 设置 JDK
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "zulu"
           cache: gradle
 
-      - name: Set up Gradle
+      - name: 设置 Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
           gradle-version: wrapper
 
-      - name: Grant execute permission for gradlew
+      - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
 
-      - name: Build with Gradle
+      - name: 使用 Gradle 进行构建
         run: ./gradlew assembleNormalRelease assembleCompatibleRelease -Pversion=${{ github.ref_name }}
 
-      - name: Locate APKs and Set Outputs
+      - name: 定位 APK 并设置输出
         id: locate_apks
         run: |
           normal_apk=$(find app/build/outputs/apk/normal/release -name "*.apk" | head -n 1)
@@ -51,13 +51,13 @@ jobs:
           echo "normal_apk=$normal_apk" >> $GITHUB_OUTPUT
           echo "compatible_apk=$compatible_apk" >> $GITHUB_OUTPUT
 
-      - name: Copy APKs to staging for signing
+      - name: 将 APK 复制到暂存阶段以进行签名
         run: |
           mkdir -p app/build/outputs/apk/all
           cp "${{ steps.locate_apks.outputs.normal_apk }}" app/build/outputs/apk/all/
           cp "${{ steps.locate_apks.outputs.compatible_apk }}" app/build/outputs/apk/all/
 
-      - name: Sign APKs
+      - name: 签名 APK
         id: sign_apks
         uses: ilharp/sign-android-release@v2
         with:
@@ -68,7 +68,7 @@ jobs:
           keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
           buildToolsVersion: 36.0.0
 
-      - name: Extract Signed APK Paths
+      - name: 提取已签名的 APK 路径
         id: extract_apks
         run: |
           IFS=':' read -r -a files <<< "${{ steps.sign_apks.outputs.signedFiles }}"
@@ -80,19 +80,19 @@ jobs:
             fi
           done
 
-      - name: Upload APK - Compatible
+      - name: 上传 APK - 兼容版
         uses: actions/upload-artifact@v4
         with:
           name: apk-compatible
           path: ${{ steps.extract_apks.outputs.signed_compatible }}
 
-      - name: Upload APK - Normal
+      - name: 上传 APK - 正常版
         uses: actions/upload-artifact@v4
         with:
           name: apk-normal
           path: ${{ steps.extract_apks.outputs.signed_normal }}
 
-      - name: Extract file names
+      - name: 提取文件名
         id: extract_info
         run: |
           normal_file=$(basename "${{ steps.extract_apks.outputs.signed_normal }}")
@@ -103,12 +103,12 @@ jobs:
           echo "compatible_file=$compatible_file" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Generate APKS Checksum
+      - name: 生成 APKS 校验和值
         run: |
           sha256sum ${{ steps.extract_apks.outputs.signed_normal }} > CHECKSUMS-Sesame-Normal-${{ steps.extract_info.outputs.version }}.${{ env.SHORT_SHA }}-signed.apk.sha256
           sha256sum ${{ steps.extract_apks.outputs.signed_compatible }} > CHECKSUMS-Sesame-Compatible-${{ steps.extract_info.outputs.version }}.${{ env.SHORT_SHA }}-signed.apk.sha256
 
-      - name: Create Tag from Version
+      - name: 根据版本创建标签
         if: startsWith(github.ref, 'refs/heads/main') && github.event_name == 'push'
         run: |
           VERSION_TAG="v${{ steps.extract_info.outputs.version }}"
@@ -116,7 +116,7 @@ jobs:
           git tag "$VERSION_TAG"
           git push origin "$VERSION_TAG"
 
-      - name: Post to channel
+      - name: 发布到频道
         if: github.ref == 'refs/heads/main'
         env:
           CHANNEL_ID: ${{ secrets.TG_CHAT_ID }}
@@ -136,7 +136,7 @@ jobs:
             -F "compatible.apk=@${COMPATIBLE_FILE}"
       
 
-      - name: Upload Assets to Source Release
+      - name: 将资产上传到源代码发布
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.event.release.tag_name || steps.extract_info.outputs.version }} # 发布的名称。默认为标签名称
@@ -158,7 +158,7 @@ jobs:
               * Compatible 为兼容版本,适用于`Android 7.0`及以下的系统,最低支持`Android 5.1`
 
             > ~~墙内不再更新~~ 倒卖必死全家
-      - name: Sync Release to Target Repository
+      - name: 将发行版同步到目标存储库
         uses: softprops/action-gh-release@v2
         with:
           repository: Xposed-Modules-Repo/fansirsqi.xposed.sesame # 目标仓库的拥有者和仓库名称
